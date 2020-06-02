@@ -6,7 +6,7 @@ LABEL maintainer="Gilberto Muñoz <gilberto@generalsoftwareinc.com>"
 ENV HADOOP_HOME=/opt/hadoop \
     HADOOP_VERION=2.9.2
 
-ARG HADOOP_URL=https://non-root-registry.generalsoftwareinc.net/repository/apache-cache-registry/hadoop-${HADOOP_VERION}.tar.gz
+ARG HADOOP_URL=https://downloads.apache.org/hadoop/common/hadoop-${HADOOP_VERION}/hadoop-${HADOOP_VERION}.tar.gz
 
 RUN useradd -lrmU non-root
 
