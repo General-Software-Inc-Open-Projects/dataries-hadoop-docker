@@ -20,8 +20,6 @@ RUN curl ${HADOOP_URL} | tar -xz -C /opt && \
     mv /opt/hadoop-${HADOOP_VERION} ${HADOOP_HOME} && \
     chown -R non-root:non-root ${HADOOP_HOME}
 
-COPY --chown=non-root:non-root config_templates/ ${HADOOP_HOME}/etc/hadoop/
-
 USER non-root
 
 WORKDIR ${HADOOP_HOME}
