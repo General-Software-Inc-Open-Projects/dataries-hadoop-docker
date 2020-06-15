@@ -1,32 +1,37 @@
-FROM openjdk:8-jdk-slim
-LABEL version="2.9.2"
+FROM openjdk:8-jre-slim
+LABEL version="3.2.1"
 LABEL maintainer="Gilberto Muñoz <gilberto@generalsoftwareinc.com>"
 
 
-ENV HADOOP_HOME=/opt/hadoop \
-    HADOOP_VERION=2.9.2
+ENV HADOOP_VERION="3.2.1" \
+    HADOOP_HOME="/opt/hadoop"
 
 ARG HADOOP_URL=https://downloads.apache.org/hadoop/common/hadoop-${HADOOP_VERION}/hadoop-${HADOOP_VERION}.tar.gz
 
-RUN useradd -lrmU non-root
+RUN set -eux; \
+        useradd -lU hadoop
 
-RUN apt-get update && \
-    apt-get install --yes --no-install-recommends \ 
-        curl && \
-    apt-get autoremove --yes && \
-    apt-get clean
+RUN  set -eux; \
+        apt-get update; \
+        apt-get install --yes --no-install-recommends \ 
+            curl; \
+        apt-get autoremove --yes; \
+        apt-get clean
 
-RUN curl ${HADOOP_URL} | tar -xz -C /opt && \
-    mv /opt/hadoop-${HADOOP_VERION} ${HADOOP_HOME} && \
-    chown -R non-root:non-root ${HADOOP_HOME}
+RUN set -eux; \
+        curl ${HADOOP_URL} | tar -xz -C /opt && \
+        mv /opt/hadoop-${HADOOP_VERION} ${HADOOP_HOME} && \
+        chown -R hadoop:hadoop ${HADOOP_HOME}
 
-USER non-root
+ENV PATH="${PATH}:${HADOOP_HOME}/bin"
+
+USER hadoop
 
 WORKDIR ${HADOOP_HOME}
 
-COPY --chown=non-root:non-root healthcheck.sh entrypoint.sh /usr/bin/
+COPY --chown=hadoop:hadoop healthcheck.sh entrypoint.sh /usr/bin/
 
-ENTRYPOINT entrypoint.sh
+ENTRYPOINT ["entrypoint.sh"]
 
 HEALTHCHECK --interval=30s --timeout=15s --start-period=60s \
-    CMD healthcheck.sh
+    CMD ["healthcheck.sh"]
