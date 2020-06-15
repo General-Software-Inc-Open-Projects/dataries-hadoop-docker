@@ -1,42 +1,68 @@
 #!/bin/bash
 
-echo "" > $HADOOP_HOME/etc/hadoop/slaves
+# set -e
 
-sed -i "s|SCHEDULER_MAX_AM_PERCENT|$SCHEDULER_MAX_AM_PERCENT|" "$HADOOP_HOME/etc/hadoop/capacity-scheduler.xml"
+config="$HADOOP_HOME/etc/hadoop"
 
-sed -i "s|DEFAULT_FS|$DEFAULT_FS|" "$HADOOP_HOME/etc/hadoop/core-site.xml"
-sed -i "s|HTTP_USER|$HTTP_USER|" "$HADOOP_HOME/etc/hadoop/core-site.xml"
+echo "" > "$config/slaves"
 
-sed -i "s|NAMENODE_PATH|$HADOOP_HOME/data/nameNode|" "$HADOOP_HOME/etc/hadoop/hdfs-site.xml"
-sed -i "s|DATANODE_PATH|$HADOOP_HOME/data/dataNode|" "$HADOOP_HOME/etc/hadoop/hdfs-site.xml"
-sed -i "s|REPLICATION_FACTOR|$REPLICATION_FACTOR|" "$HADOOP_HOME/etc/hadoop/hdfs-site.xml"
+# Create base conf file if missing
+# if [[ ! -f "$config/zoo.cfg" ]]; then
+#     cp "$config/zoo_sample.cfg" "$config/zoo.cfg"
+# fi
 
-sed -i "s|RM_HOSTNAME|$RM_HOSTNAME|" "$HADOOP_HOME/etc/hadoop/yarn-site.xml"
-sed -i "s|NODEMANAGER_MB|$NODEMANAGER_MB|" "$HADOOP_HOME/etc/hadoop/yarn-site.xml"
-sed -i "s|SCHEDULER_MAX_MB|$SCHEDULER_MAX_MB|" "$HADOOP_HOME/etc/hadoop/yarn-site.xml"
-sed -i "s|SCHEDULER_MIN_MB|$SCHEDULER_MIN_MB|" "$HADOOP_HOME/etc/hadoop/yarn-site.xml"
-sed -i "s|SCHEDULER_INC_MB|$SCHEDULER_INC_MB|" "$HADOOP_HOME/etc/hadoop/yarn-site.xml"
-sed -i "s|LOG_AGGREGATION|$LOG_AGGREGATION|" "$HADOOP_HOME/etc/hadoop/yarn-site.xml"
+export XML_HDFS_dfs_namenode_name_dir="$HADOOP_HOME/data/nameNode"
+export XML_HDFS_dfs_datanode_data_dir="$HADOOP_HOME/data/dataNode"
 
-if [[ $HADOOP_ROLE = "master" ]]; then
-    $HADOOP_HOME/bin/hdfs namenode -format -force
-    $HADOOP_HOME/sbin/hadoop-daemon.sh --script hdfs start namenode
-    $HADOOP_HOME/sbin/yarn-daemon.sh start resourcemanager
-    $HADOOP_HOME/sbin/yarn-daemon.sh start proxyserver
-    $HADOOP_HOME/sbin/mr-jobhistory-daemon.sh start historyserver
+function addProperty() {
+  local path=$1
+  local name=$2
+  local value=$3
 
-    while [[ $( jps | grep -e 'NameNode' -e 'ResourceManager' -e 'JobHistoryServer' | wc -l ) -eq 3 ]]; do
-        sleep 5
+  local entry="<property><name>$name</name><value>${value}</value></property>"
+  local escapedEntry=$(echo $entry | sed 's/\//\\\//g')
+  sed -i "/<\/configuration>/ s/.*/${escapedEntry}\n&/" $path
+}
+
+function configure() {
+    local path=$1
+    local module=$2
+    local envPrefix=$3
+
+    local var
+    local value
+    
+    echo "Configuring $module"
+    for c in `printenv | perl -sne 'print "$1 " if m/^${envPrefix}_(.+?)=.*/' -- -envPrefix=$envPrefix`; do 
+        name=`echo ${c} | perl -pe 's/___/-/g; s/__/_/g; s/_/./g'`
+        var="${envPrefix}_${c}"
+        value=${!var}
+        echo " - Setting $name=$value"
+        addProperty /etc/hadoop/$module-site.xml $name "$value"
     done
+}
 
-    exit 1
-else    
-    $HADOOP_HOME/sbin/hadoop-daemon.sh --script hdfs start datanode
-    $HADOOP_HOME/sbin/yarn-daemon.sh start nodemanager
-
-    while [[ $( jps | grep -e 'DataNode' -e 'NodeManager' | wc -l ) -eq 2 ]]; do
-        sleep 5
-    done
-
-    exit 1
+if [[ "$HADOOP_SERVICES" == *"namenode"* ]]; then
+    hdfs namenode -format -force
+    hadoop-daemon.sh --script hdfs start namenode
 fi
+if [[ "$HADOOP_SERVICES" == *"resourcemanager"* ]]; then
+    yarn-daemon.sh start resourcemanager
+fi
+if [[ "$HADOOP_SERVICES" == *"proxyserver"* ]]; then
+    yarn-daemon.sh start proxyserver
+fi
+if [[ "$HADOOP_SERVICES" == *"historyserver"* ]]; then
+    mr-jobhistory-daemon.sh start historyserver
+fi
+
+if [[ "$HADOOP_SERVICES" == *"nodemanager"* ]]; then
+    hadoop-daemon.sh --script hdfs start datanode
+fi
+if [[ "$HADOOP_SERVICES" == *"datanode"* ]]; then
+    yarn-daemon.sh start nodemanager
+fi
+
+# exec "$@"
+
+tail -f /dev/null
