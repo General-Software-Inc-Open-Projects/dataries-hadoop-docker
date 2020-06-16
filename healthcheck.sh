@@ -1,26 +1,46 @@
 #!/bin/bash
 
 
-if [[ $HADOOP_ROLE = "master" ]]; then
-
-    yarn_result=$(curl -I http://$(hostname):8088 -s -o /dev/null -w "%{http_code}")
-    hdfs_result=$(curl -I http://$(hostname):50070 -s -o /dev/null -w "%{http_code}")
-
-    if [[ $yarn_result -eq 302 && $hdfs_result -eq 200 ]]; then
-        exit 0
-    else
+if [[ "$HADOOP_SERVICES" == *"namenode"* ]]; then
+    if [[ -z $HEALTHCHECK_URL_NAMENODE ]]
+        export HEALTHCHECK_URL_NAMENODE="localhost:9870"
+    fi
+    if [[ $(curl -LI "$HEALTHCHECK_URL_NAMENODE/jmx" -s -o /dev/null -w "%{http_code}") -ne 200 ]]; then
         exit 1
     fi
-
-else
-    
-    yarn_result=$(curl -I http://$(hostname):8042 -s -o /dev/null -w "%{http_code}")
-    hdfs_result=$(curl -I http://$(hostname):50075 -s -o /dev/null -w "%{http_code}")
-    
-    if [[ $yarn_result -eq 302 && $hdfs_result -eq 200 ]]; then
-        exit 0
-    else
-        exit 1
-    fi
-
 fi
+if [[ "$HADOOP_SERVICES" == *"resourcemanager"* ]]; then
+    if [[ -z $HEALTHCHECK_URL_RESOURCEMANAGER ]]
+        export HEALTHCHECK_URL_RESOURCEMANAGER="localhost:8088"
+    fi
+    if [[ $(curl -LI "$HEALTHCHECK_URL_RESOURCEMANAGER/jmx" -s -o /dev/null -w "%{http_code}") -ne 200 ]]; then
+        exit 1
+    fi
+fi
+if [[ "$HADOOP_SERVICES" == *"historyserver"* ]]; then
+    if [[ -z $HEALTHCHECK_URL_HISTORYSERVER ]]
+        export HEALTHCHECK_URL_HISTORYSERVER="localhost:19888"
+    fi
+    if [[ $(curl -LI "$HEALTHCHECK_URL_HISTORYSERVER/jmx" -s -o /dev/null -w "%{http_code}") -ne 200 ]]; then
+        exit 1
+    fi
+fi
+
+if [[ "$HADOOP_SERVICES" == *"nodemanager"* ]]; then
+    if [[ -z $HEALTHCHECK_URL_NODEMANAGER ]]
+        export HEALTHCHECK_URL_NODEMANAGER="localhost:8042"
+    fi
+    if [[ $(curl -LI "$HEALTHCHECK_URL_NODEMANAGER/jmx" -s -o /dev/null -w "%{http_code}") -ne 200 ]]; then
+        exit 1
+    fi
+fi
+if [[ "$HADOOP_SERVICES" == *"datanode"* ]]; then
+    if [[ -z $HEALTHCHECK_URL_DATANODE ]]
+        export HEALTHCHECK_URL_DATANODE="localhost:9864"
+    fi
+    if [[ $(curl -LI "$HEALTHCHECK_URL_DATANODE/jmx" -s -o /dev/null -w "%{http_code}") -ne 200 ]]; then
+        exit 1
+    fi
+fi
+
+exit 0

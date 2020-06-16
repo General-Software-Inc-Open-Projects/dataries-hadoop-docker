@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# set -e
+set -e
 
 function addProperty() {
   local path=$1
@@ -68,11 +68,11 @@ fi
 if [[ "$HADOOP_SERVICES" == *"resourcemanager"* ]]; then
     yarn --daemon start resourcemanager
 fi
-if [[ "$HADOOP_SERVICES" == *"proxyserver"* ]]; then
-    yarn --daemon start proxyserver
-fi
 if [[ "$HADOOP_SERVICES" == *"historyserver"* ]]; then
     mapred --daemon start historyserver
+fi
+if [[ "$HADOOP_SERVICES" == *"proxyserver"* ]]; then
+    yarn --daemon start proxyserver
 fi
 
 if [[ "$HADOOP_SERVICES" == *"nodemanager"* ]]; then

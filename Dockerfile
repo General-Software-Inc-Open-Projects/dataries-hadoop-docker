@@ -1,4 +1,4 @@
-FROM openjdk:8-jdk-slim
+FROM openjdk:8-jre-slim
 LABEL version="3.2.1"
 LABEL maintainer="Gilberto Muñoz <gilberto@generalsoftwareinc.com>"
 
