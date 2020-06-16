@@ -71,15 +71,12 @@ fi
 if [[ "$HADOOP_SERVICES" == *"historyserver"* ]]; then
     mapred --daemon start historyserver
 fi
-if [[ "$HADOOP_SERVICES" == *"proxyserver"* ]]; then
-    yarn --daemon start proxyserver
-fi
 
-if [[ "$HADOOP_SERVICES" == *"nodemanager"* ]]; then
-    yarn --daemon start nodemanager
-fi
 if [[ "$HADOOP_SERVICES" == *"datanode"* ]]; then
     hdfs --daemon start datanode
+fi
+if [[ "$HADOOP_SERVICES" == *"nodemanager"* ]]; then
+    yarn --daemon start nodemanager
 fi
 
 tail -f /dev/null
