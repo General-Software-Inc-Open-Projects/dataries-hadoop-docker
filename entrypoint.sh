@@ -59,7 +59,7 @@ configure "$config/hadoop-policy.xml" XML_HADOOP_POLICY
 
 # Start services
 if [[ "$HADOOP_SERVICES" == *"namenode"* ]]; then
-    if [[ -f "$config/flag" ]]; then
+    if [[ ! -f "$config/flag" ]]; then
         hdfs namenode -format -force $CLUSTER_NAME
         touch $config/flag
     fi
