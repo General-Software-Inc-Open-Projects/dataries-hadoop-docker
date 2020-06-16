@@ -14,7 +14,7 @@ function addProperty() {
 
 function configure() {
     local path=$1
-    local envPrefix=$3
+    local envPrefix=$2
 
     local var
     local value
