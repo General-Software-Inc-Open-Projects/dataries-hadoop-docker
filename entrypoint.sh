@@ -34,9 +34,11 @@ echo "" > "$config/workers"
 
 if [[ "$HADOOP_SERVICES" == *"namenode"* ]]; then
     export XML_HDFS_dfs_namenode_name_dir="$HADOOP_HOME/data/nameNode"
+    mkdir -p "$HADOOP_HOME/data/nameNode"
 fi
 if [[ "$HADOOP_SERVICES" == *"datanode"* ]]; then
     export XML_HDFS_dfs_datanode_data_dir="$HADOOP_HOME/data/dataNode"
+    mkdir -p "$HADOOP_HOME/data/dataNode"
 fi
 if [[ -z $CLUSTER_NAME ]]; then
     export CLUSTER_NAME="Hadoop"
