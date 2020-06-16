@@ -1,18 +1,6 @@
 #!/bin/bash
 
-# set -e
-
-config="$HADOOP_HOME/etc/hadoop"
-
-echo "" > "$config/slaves"
-
-# Create base conf file if missing
-# if [[ ! -f "$config/zoo.cfg" ]]; then
-#     cp "$config/zoo_sample.cfg" "$config/zoo.cfg"
-# fi
-
-export XML_HDFS_dfs_namenode_name_dir="$HADOOP_HOME/data/nameNode"
-export XML_HDFS_dfs_datanode_data_dir="$HADOOP_HOME/data/dataNode"
+set -e
 
 function addProperty() {
   local path=$1
@@ -26,22 +14,47 @@ function addProperty() {
 
 function configure() {
     local path=$1
-    local module=$2
     local envPrefix=$3
 
     local var
     local value
     
-    echo "Configuring $module"
     for c in `printenv | perl -sne 'print "$1 " if m/^${envPrefix}_(.+?)=.*/' -- -envPrefix=$envPrefix`; do 
         name=`echo ${c} | perl -pe 's/___/-/g; s/__/_/g; s/_/./g'`
         var="${envPrefix}_${c}"
         value=${!var}
-        echo " - Setting $name=$value"
-        addProperty /etc/hadoop/$module-site.xml $name "$value"
+        addProperty $path $name "$value"
     done
 }
 
+
+# Set sensitive config
+config="$HADOOP_HOME/etc/hadoop"
+
+# echo "" > "$config/slaves"
+# echo "" > "$config/workers"
+
+if [[ "$HADOOP_SERVICES" == *"namenode"* ]]; then
+    export XML_HDFS_dfs_namenode_name_dir="$HADOOP_HOME/data/nameNode"
+fi
+if [[ "$HADOOP_SERVICES" == *"datanode"* ]]; then
+    export XML_HDFS_dfs_datanode_data_dir="$HADOOP_HOME/data/dataNode"
+fi
+
+
+# Add env to conf
+configure "$config/core-site.xml" XML_CORE
+configure "$config/hdfs-site.xml" XML_HDFS
+configure "$config/httpfs-site.xml" XML_HTTPFS
+configure "$config/yarn-site.xml" XML_YARN
+configure "$config/capacity-scheduler.xml" XML_CAPACITY_SCHEDULER
+configure "$config/mapred-site.xml" XML_MAPRED
+configure "$config/kms-site.xml" XML_KMS
+configure "$config/kms-acls.xml" XML_KMS_ACLS
+configure "$config/hadoop-policy.xml" XML_HADOOP_POLICY
+
+
+# Start services
 if [[ "$HADOOP_SERVICES" == *"namenode"* ]]; then
     hdfs namenode -format -force
     hadoop-daemon.sh --script hdfs start namenode
@@ -62,7 +75,5 @@ fi
 if [[ "$HADOOP_SERVICES" == *"datanode"* ]]; then
     yarn-daemon.sh start nodemanager
 fi
-
-# exec "$@"
 
 tail -f /dev/null
