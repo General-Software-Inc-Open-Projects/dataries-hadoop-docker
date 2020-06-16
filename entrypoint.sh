@@ -31,7 +31,6 @@ function configure() {
 # Set sensitive config
 config="$HADOOP_HOME/etc/hadoop"
 echo "" > "$config/workers"
-touch $config/flag
 
 if [[ "$HADOOP_SERVICES" == *"namenode"* ]]; then
     export XML_HDFS_dfs_namenode_name_dir="$HADOOP_HOME/data/nameNode"
@@ -58,8 +57,9 @@ configure "$config/hadoop-policy.xml" XML_HADOOP_POLICY
 
 # Start services
 if [[ "$HADOOP_SERVICES" == *"namenode"* ]]; then
-    if [[ ! -f "$config/flag" ]]; then
+    if [[ -f "$config/flag" ]]; then
         hdfs namenode -format -force $CLUSTER_NAME
+        touch $config/flag
     fi
     hdfs --daemon start namenode
 fi
