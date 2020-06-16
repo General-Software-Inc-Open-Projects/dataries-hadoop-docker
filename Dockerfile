@@ -23,7 +23,7 @@ RUN set -eux; \
         mv /opt/hadoop-${HADOOP_VERION} ${HADOOP_HOME} && \
         chown -R hadoop:hadoop ${HADOOP_HOME}
 
-ENV PATH="${PATH}:${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin"
+ENV PATH="${PATH}:${HADOOP_HOME}/bin"
 
 USER hadoop
 

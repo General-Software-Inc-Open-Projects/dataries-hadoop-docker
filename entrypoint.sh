@@ -30,15 +30,17 @@ function configure() {
 
 # Set sensitive config
 config="$HADOOP_HOME/etc/hadoop"
-
-# echo "" > "$config/slaves"
-# echo "" > "$config/workers"
+echo "" > "$config/workers"
+touch $config/flag
 
 if [[ "$HADOOP_SERVICES" == *"namenode"* ]]; then
     export XML_HDFS_dfs_namenode_name_dir="$HADOOP_HOME/data/nameNode"
 fi
 if [[ "$HADOOP_SERVICES" == *"datanode"* ]]; then
     export XML_HDFS_dfs_datanode_data_dir="$HADOOP_HOME/data/dataNode"
+fi
+if [[ -z $CLUSTER_NAME ]]; then
+    export CLUSTER_NAME="Hadoop"
 fi
 
 
@@ -56,24 +58,26 @@ configure "$config/hadoop-policy.xml" XML_HADOOP_POLICY
 
 # Start services
 if [[ "$HADOOP_SERVICES" == *"namenode"* ]]; then
-    hdfs namenode -format -force
-    hadoop-daemon.sh --script hdfs start namenode
+    if [[ ! -f "$config/flag" ]]; then
+        hdfs namenode -format -force $CLUSTER_NAME
+    fi
+    hdfs --daemon start namenode
 fi
 if [[ "$HADOOP_SERVICES" == *"resourcemanager"* ]]; then
-    yarn-daemon.sh start resourcemanager
+    yarn --daemon start resourcemanager
 fi
 if [[ "$HADOOP_SERVICES" == *"proxyserver"* ]]; then
-    yarn-daemon.sh start proxyserver
+    yarn --daemon start proxyserver
 fi
 if [[ "$HADOOP_SERVICES" == *"historyserver"* ]]; then
-    mr-jobhistory-daemon.sh start historyserver
+    mapred --daemon start historyserver
 fi
 
 if [[ "$HADOOP_SERVICES" == *"nodemanager"* ]]; then
-    hadoop-daemon.sh --script hdfs start datanode
+    yarn --daemon start nodemanager
 fi
 if [[ "$HADOOP_SERVICES" == *"datanode"* ]]; then
-    yarn-daemon.sh start nodemanager
+    hdfs --daemon start datanode
 fi
 
 tail -f /dev/null
