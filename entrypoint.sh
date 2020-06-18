@@ -2,14 +2,18 @@
 
 # set -e
 
-function addProperty() {
-  local path=$1
-  local name=$2
-  local value=$3
+function upsertProperty() {
+    local path=$1
+    local name=$2
+    local value=$3
 
-  local entry="<property><name>$name</name><value>${value}</value></property>"
-  local escapedEntry=$(echo $entry | sed 's/\//\\\//g')
-  sed -i "/<\/configuration>/ s/.*/${escapedEntry}\n&/" $path
+    local entry="<property><name>$name</name><value>${value}</value></property>"
+  
+    if grep -q "$name"; then
+        perl -0777 -pi -e "s|<property>.*?$name.*?</property>|$entry|sg;" $path
+    else
+        perl -0777 -pi -e "s|</configuration>|  $entry\n\n</configuration>|sg;" $path
+    fi
 }
 
 function configure() {
@@ -23,7 +27,7 @@ function configure() {
         name=`echo ${c} | perl -pe 's/___/-/g; s/__/_/g; s/_/./g'`
         var="${envPrefix}_${c}"
         value=${!var}
-        addProperty $path $name "$value"
+        upsertProperty $path $name "$value"
     done
 }
 
