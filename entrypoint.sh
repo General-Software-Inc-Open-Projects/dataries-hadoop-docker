@@ -3,22 +3,23 @@
 # set -e
 
 function upsertProperty() {
-    local path=$1
-    local name=$2
-    local value=$3
+    local path="$1"
+    local name="$2"
+    local value="$3"
 
-    local entry="<property><name>$name</name><value>${value}</value></property>"
+    local entry="$name</name>\n    <value>${value}</value>\n  </property>"
   
+    echo "$name"
     if grep -q "$name" "$path"; then
-        perl -0777 -pi -e "s|<property>.*?$name.*?</property>|$entry|sg;" $path
+        perl -0777 -pi -e "s|$name.*?</property>|$entry|sg;" "$path"
     else
-        perl -0777 -pi -e "s|</configuration>|  $entry\n\n</configuration>|sg;" $path
+        perl -0777 -pi -e "s|</configuration>|  <property>\n    <name>$entry\n\n</configuration>|sg;" "$path"
     fi
 }
 
 function configure() {
-    local path=$1
-    local envPrefix=$2
+    local path="$1"
+    local envPrefix="$2"
 
     local var
     local value
@@ -26,8 +27,8 @@ function configure() {
     for c in `printenv | perl -sne 'print "$1 " if m/^${envPrefix}_(.+?)=.*/' -- -envPrefix=$envPrefix`; do 
         name=`echo ${c} | perl -pe 's/___/-/g; s/__/_/g; s/_/./g'`
         var="${envPrefix}_${c}"
-        value=${!var}
-        upsertProperty $path $name "$value"
+        value="${!var}"
+        upsertProperty "$path" "$name" "$value"
     done
 }
 
