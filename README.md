@@ -4,8 +4,8 @@ This image was created with the intention of quickly deploy and configure Apache
 
 # Quick reference
 
-- Maintained by: [General Software Inc Open Projects](https://github.com/General-Software-Inc-Open-Projects/hadoop-docker)
-- Where to file issues: [GitHub Issues](https://github.com/General-Software-Inc-Open-Projects/hadoop-docker/issues)
+- Maintained by: [General Software Inc Open Projects](https://github.com/General-Software-Inc-Open-Projects/dataries-hadoop-docker)
+- Where to file issues: [GitHub Issues](https://github.com/General-Software-Inc-Open-Projects/dataries-hadoop-docker/issues)
 
 # What is Apache Hadoop?
 
