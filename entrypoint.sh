@@ -9,7 +9,7 @@ function upsertProperty() {
 
     local entry="<property><name>$name</name><value>${value}</value></property>"
   
-    if grep -q "$name"; then
+    if grep -q "$name" "$path"; then
         perl -0777 -pi -e "s|<property>.*?$name.*?</property>|$entry|sg;" $path
     else
         perl -0777 -pi -e "s|</configuration>|  $entry\n\n</configuration>|sg;" $path
