@@ -19,64 +19,43 @@ The [Apache Hadoop](https://hadoop.apache.org/) software library is a framework 
 docker run -itd --name hadoop -e "XML_CORE_hadoop_http_staticuser_user=hadoop" -e "XML_HDFS_dfs_replication=1" -p 9870:9870 -p 8088:8088 -p 19888:19888 -p 8042:8042 -p 9864:9864 --restart on-failure gsiopen/hadoop:3.2.1
 ~~~
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 ## Persist data
 
-> This image is runned using a non root user `zookeeper` who owns the `/opt/zookeeper` folder.
+> This image is runned using a non root user `hadoop` who owns the `/opt/hadoop` folder.
 
-By default, zookeeper's data and datalog are stored in `/opt/zookeeper/data` and `/opt/zookeeper/datalog`. You can bind local volumes to each as follows:
+By default, hadoop's data is stored in `/opt/hadoop/data`. You can bind local volume as follows:
 
 ~~~bash
-docker run -itd --name zookeeper -v /path/to/store/data:/opt/zookeeper/data -v /path/to/store/datalog:/opt/zookeeper/datalog -p 2181:2181 -p 2888:2888 -p 3888:3888 -p 8080:8080 --restart on-failure gsiopen/zookeeper:3.6.1
+docker run -itd --name hadoop -v /path/to/store/data:/opt/hadoop/data -e "XML_CORE_hadoop_http_staticuser_user=hadoop" -e "XML_HDFS_dfs_replication=1" -p 9870:9870 -p 8088:8088 -p 19888:19888 -p 8042:8042 -p 9864:9864 --restart on-failure gsiopen/hadoop:3.2.1
 ~~~
- 
-## Connect to Zookeeper from the command line client
+
+## Connect to Hadoop from the command line client
+
+All `CLI` scripts are contained in `PATH`, so you can invoke them using their respective commands and arguments as follows: 
 
 ~~~bash
-docker exec -it zookeeper zkCli.sh
+docker exec -it hadoop hadoop fs -ls /
 ~~~
 
 ## Logging
 
-By default, ZooKeeper redirects stdout/stderr outputs to the console so you can run the next command to find logs:
+You can find out if something went wrong while initializing the container using the next command:
 
 ~~~bash
-docker logs zookeeper
+docker logs hadoop
 ~~~
 
-However you can redirect logs to files in `/opt/zookeeper/logs` by passing the environment variable ZOO_LOG4J_PROP as follows:
-
-~~~bash
-docker run -itd --name zookeeper -e ZOO_LOG4J_PROP="INFO,ROLLINGFILE" -p 2181:2181 -p 2888:2888 -p 3888:3888 -p 8080:8080 --restart on-failure gsiopen/zookeeper:3.6.1
-~~~
-
-Check [ZooKeeper Logging](https://zookeeper.apache.org/doc/current/zookeeperAdmin.html#sc_logging) for more details.
+The rest can be found in the `logs` folder with format `hadoop-hadoop-[service]-[hostname].[log|out]`
 
 # Deploy a cluster
 
-Environment variables below are mandatory if you want to run Zookeeper in replicated mode.
+Hadoop is conformed by many services, to select which ones will be launched in each container, use the next environment variable:
 
-### `ZOO_MY_ID`
+### `HADOOP_SERVICES`
 
-> The id must be unique within the ensemble and should have a value between 1 and 255.
+> Hadoop services that will be started as daemons in the container, options are: `namenode`, `resourcemanager`, `historyserver`, `nodemanager`, `datanode`.
 
-### `ZOO_SERVERS`
-
-> This variable allows you to specify a list of machines of the Zookeeper ensemble. Each entry has the form of `server.id=<address1>:<port1>:<port2>[:role];[<client port address>:]<client port>` and are separated by spaces.
-
-Check [Zookeeper Dynamic Reconfiguration](https://zookeeper.apache.org/doc/current/zookeeperReconfig.html) for more details.
+You have to configure each container accordingly to the services you intent to launch on them, check the official documentation [here](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/ClusterSetup.html) to learn how it is done. 
 
 Example using `docker-compose`:
 
@@ -93,37 +72,46 @@ networks:
         - subnet: 192.168.1.0/24
 
 services:
-  zoo-1:
-    image: gsiopen/zookeeper:3.6.1
-    container_name: zoo-1
-    hostname: zoo-1
+  hadoop-master:
+    image: gsiopen/hadoop:3.2.1
+    container_name: hadoop-master
+    hostname: hadoop-master
     environment:
-      - ZOO_MY_ID=1
-      - ZOO_SERVERS=server.1=0.0.0.0:2888:3888;2181 server.2=zoo-2:2888:3888;2181 server.3=zoo-3:2888:3888;2181
+      - HADOOP_SERVICES="namenode resourcemanager historyserver"
+      - XML_CORE_fs_defaultFS=hdfs://hadoop-master:9000
+      - XML_CORE_hadoop_http_staticuser_user=hadoop
+      - XML_HDFS_dfs_replication=2
+      - XML_YARN_yarn_log___aggregation___enable=true
     restart: on-failure
     networks:
       private-net:
         ipv4_address: 192.168.1.2
 
-  zoo-2:
-    image: gsiopen/zookeeper:3.6.1
-    container_name: zoo-2
-    hostname: zoo-2
+  hadoop-slave-1:
+    image: gsiopen/hadoop:3.2.1
+    container_name: hadoop-slave-1
+    hostname: hadoop-slave-1
     environment:
-      - ZOO_MY_ID=2
-      - ZOO_SERVERS=server.1=zoo-1:2888:3888;2181 server.2=0.0.0.0:2888:3888;2181 server.3=zoo-3:2888:3888;2181
+      - HADOOP_SERVICES="nodemanager datanode"
+      - XML_CORE_fs_defaultFS=hdfs://hadoop-master:9000
+      - XML_YARN_yarn_resourcemanager_hostname=hadoop-master
+    depends_on:
+      - hadoop-master
     restart: on-failure
     networks:
       private-net:
         ipv4_address: 192.168.1.3
 
-  zoo-3:
-    image: gsiopen/zookeeper:3.6.1
-    container_name: zoo-3
-    hostname: zoo-3
+  hadoop-slave-2:
+    image: gsiopen/hadoop:3.2.1
+    container_name: hadoop-slave-2
+    hostname: hadoop-slave-2
     environment:
-      - ZOO_MY_ID=3
-      - ZOO_SERVERS=server.1=zoo-1:2888:3888;2181 server.2=zoo-2:2888:3888;2181 server.3=0.0.0.0:2888:3888;2181
+      - HADOOP_SERVICES="nodemanager datanode"
+      - XML_CORE_fs_defaultFS=hdfs://hadoop-master:9000
+      - XML_YARN_yarn_resourcemanager_hostname=hadoop-master
+    depends_on:
+      - hadoop-master
     restart: on-failure
     networks:
       private-net:
@@ -134,19 +122,26 @@ services:
 
 ## Volumes
 
-Zookeeper uses default configuration files in the `/opt/zookeeper/conf` folder. You can bind an external folder with your configuration files as follows:
+Hadoop uses configuration files in the `/opt/hadoop/etc/hadoop` folder. You can bind an external folder with your configuration files as follows:
 
 ~~~bash
-docker run -itd --name zookeeper -v /path/to/conf:/opt/zookeeper/conf -p 2181:2181 -p 2888:2888 -p 3888:3888 -p 8080:8080 --restart on-failure gsiopen/zookeeper:3.6.1
+docker run -itd --name hadoop -v /path/to/conf:/opt/hadoop/etc/hadoop -p 9870:9870 -p 8088:8088 -p 19888:19888 -p 8042:8042 -p 9864:9864 --restart on-failure gsiopen/hadoop:3.2.1
 ~~~
 
 ## Environment variables
 
 The environment configuration is controlled via the following environment variable groups or PREFIX:
 
-    CONF_ZOO: affects zoo.cfg
-    CONF_LOG4J: affects log4j.properties
-    
+    XML_CORE: affects core-site.xml
+    XML_HDFS: affects hdfs-site.xml
+    XML_HTTPFS: affects httpfs-site.xml
+    XML_YARN: affects yarn-site.xml
+    XML_CAPACITY_SCHEDULER: affects capacity-scheduler.xml
+    XML_MAPRED: affects mapred-site.xml
+    XML_KMS: affects kms-site.xml
+    XML_KMS_ACLS: affects kms-acls.xml
+    XML_HADOOP_POLICY: affects hadoop-policy.xml
+
 Set environment variables with the appropriated group in the form PREFIX_PROPERTY.
 
 Due to restriction imposed by docker and docker-compose on environment variable names the following substitution are applied to PROPERTY names:
@@ -157,28 +152,12 @@ Due to restriction imposed by docker and docker-compose on environment variable 
 
 Following are some illustratory examples:
 
-    CONF_ZOO_dataLogDir=/opt/zookeeper/datalog: sets the dataLogDir property in zoo.cfg
-    CONF_ZOO_admin_enableServer=true: sets the admin.enableServer property in zoo.cfg
+    XML_HDFS_dfs_replication: sets the dfs.replication property in hdfs-site.xml
+    XML_YARN_yarn_log___aggregation___enable: sets the yarn.log-aggregation-enable property in yarn-site.xml
     
-## Java
-
-Another option would be using `JVMFLAGS` environment variable. Many of the Zookeeper advanced configuration options can be set there using Java system properties in the form of `-Dproperty=value`. For example, you can use Netty instead of NIO (default option) as a server communication framework:
-
-~~~bash
-docker run -itd --name zookeeper -e JVMFLAGS="-Dzookeeper.serverCnxnFactory=org.apache.zookeeper.server.NettyServerCnxnFactory" -p 2181:2181 -p 2888:2888 -p 3888:3888 -p 8080:8080 --restart on-failure gsiopen/zookeeper:3.6.1
-~~~
-
-See [Advanced Configuration](https://zookeeper.apache.org/doc/current/zookeeperAdmin.html#sc_advancedConfiguration) for the full list of supported Java system properties.
-
-Another example use case for the JVMFLAGS is setting a maximum JVM heap size of 1 GB:
-
-~~~bash
-docker run -itd --name zookeeper -e JVMFLAGS="-Xmx1024m" -p 2181:2181 -p 2888:2888 -p 3888:3888 -p 8080:8080 --restart on-failure gsiopen/zookeeper:3.6.1
-~~~
-
 # License
 
-View [license information](https://github.com/apache/zookeeper/blob/master/LICENSE.txt) for the software contained in this image.
+View [license information](https://github.com/apache/hadoop/blob/trunk/LICENSE.txt) for the software contained in this image.
 
 As with all Docker images, these likely also contain other software which may be under other licenses (such as Bash, etc from the base distribution, along with any direct or indirect dependencies of the primary software being contained).
 
