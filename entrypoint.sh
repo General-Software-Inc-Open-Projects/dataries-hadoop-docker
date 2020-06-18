@@ -37,6 +37,13 @@ function configure() {
 config="$HADOOP_HOME/etc/hadoop"
 echo "" > "$config/workers"
 
+if [[ -z $HADOOP_SERVICES ]]; then
+    export HADOOP_SERVICES="namenode resourcemanager historyserver datanode nodemanager"
+fi
+if [[ -z $XML_CORE_fs_defaultFS ]]; then
+    export XML_CORE_fs_defaultFS="hdfs://localhost:9000"
+fi
+
 if [[ "$HADOOP_SERVICES" == *"namenode"* ]]; then
     export XML_HDFS_dfs_namenode_name_dir="$HADOOP_HOME/data/nameNode"
     mkdir -p "$HADOOP_HOME/data/nameNode"
