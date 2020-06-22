@@ -19,8 +19,8 @@ RUN  set -eux; \
         apt-get clean
 
 RUN set -eux; \
-        curl ${HADOOP_URL} | tar -xz -C /opt && \
-        mv /opt/hadoop-${HADOOP_VERION} ${HADOOP_HOME} && \
+        curl ${HADOOP_URL} | tar -xz -C /opt; \
+        mv /opt/hadoop-${HADOOP_VERION} ${HADOOP_HOME}; \
         chown -R hadoop:hadoop ${HADOOP_HOME}
 
 ENV PATH="${PATH}:${HADOOP_HOME}/bin"
